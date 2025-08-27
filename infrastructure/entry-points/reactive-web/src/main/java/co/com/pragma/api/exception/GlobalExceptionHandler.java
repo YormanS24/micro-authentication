@@ -1,6 +1,7 @@
 package co.com.pragma.api.exception;
 
 import co.com.pragma.model.user.exception.ConflictException;
+import co.com.pragma.model.user.exception.ResourceNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
@@ -26,21 +27,20 @@ public class GlobalExceptionHandler implements ErrorWebExceptionHandler {
     public Mono<Void> handle(ServerWebExchange exchange, Throwable ex) {
         var response = exchange.getResponse();
 
-        System.out.println("[EXCEPTION] Error : " + ex.getMessage());
-
-        if (ex instanceof ValidationJakartaException vex) {
-            var errors = vex.getErrors().getAllErrors().stream()
-                    .map(DefaultMessageSourceResolvable::getDefaultMessage)
-                    .toList();
-
-            return writeJson(response, HttpStatus.BAD_REQUEST, Map.of("errors", errors));
-        }
-
-        if (ex instanceof ConflictException) {
-            return writeJson(response, HttpStatus.CONFLICT, Map.of("message", ex.getMessage()));
-        }
-
-        return Mono.error(ex);
+        return switch (ex) {
+            case ValidationJakartaException exception -> writeJson(
+                    response,
+                    HttpStatus.BAD_REQUEST,
+                    exception.getErrors().getAllErrors().stream()
+                            .map(DefaultMessageSourceResolvable::getDefaultMessage)
+                            .toList()
+            );
+            case ConflictException exception ->
+                    writeJson(response, HttpStatus.CONFLICT, Map.of("message", exception.getMessage()));
+            case ResourceNotFoundException exception ->
+                    writeJson(response, HttpStatus.NOT_FOUND, Map.of("message", exception.getMessage()));
+            default -> Mono.error(ex);
+        };
     }
 
     private Mono<Void> writeJson(ServerHttpResponse response, HttpStatus status, Object body) {
