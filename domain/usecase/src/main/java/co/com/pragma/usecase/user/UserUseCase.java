@@ -1,8 +1,12 @@
 package co.com.pragma.usecase.user;
 
 import co.com.pragma.model.user.User;
+import co.com.pragma.model.user.exception.ConflictException;
 import co.com.pragma.model.user.gateways.UserRepository;
+import co.com.pragma.usecase.user.util.ReactorUtils;
 import reactor.core.publisher.Mono;
+
+import static co.com.pragma.model.user.util.MessageUseCaseConstant.EMAIL_ALREADY_EXISTS;
 
 public class UserUseCase {
 
@@ -13,7 +17,8 @@ public class UserUseCase {
     }
 
     public Mono<Void> createUser(User user) {
-
-        return null;
+        return ReactorUtils.checkTrueOrElse(userRepository.existsEmail(user.getEmail()), () -> new ConflictException(EMAIL_ALREADY_EXISTS))
+                .then(userRepository.save(user))
+                .then();
     }
 }
