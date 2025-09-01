@@ -2,6 +2,8 @@ package co.com.pragma.api;
 
 import co.com.pragma.api.dto.UserRequest;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
+import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RequestPredicates.POST;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 
@@ -51,9 +54,40 @@ public class RouterRest {
                                     @ApiResponse(responseCode = "409", description = "User already exists")
                             }
                     )
+            ),
+            @RouterOperation(
+                    path = "/api/v1/usuario/{document_number}",
+                    produces = {"application/json"},
+                    method = RequestMethod.GET,
+                    beanClass = Handler.class,
+                    beanMethod = "getUserByDocumentNumber",
+                    operation = @Operation(
+                            operationId = "ObtenerUsuarioPorDocumento",
+                            summary = "Obtiene el correo de un usuario a partir de su número de documento",
+                            parameters = {
+                                    @Parameter(
+                                            name = "document_number",
+                                            description = "Número de documento del usuario",
+                                            required = true,
+                                            in = ParameterIn.PATH,
+                                            schema = @Schema(type = "string")
+                                    )
+                            },
+                            responses = {
+                                    @ApiResponse(responseCode = "200", description = "Usuario encontrado",
+                                            content = @Content(
+                                                    mediaType = "application/json",
+                                                    schema = @Schema(implementation = UserRequest.class)
+                                            )),
+                                    @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+                            }
+                    )
             )
     })
     public RouterFunction<ServerResponse> routerFunction(Handler handler) {
-        return route(POST("/api/v1/usuarios"), handler::createUser);
+        return route(POST("/api/v1/usuarios"), handler::createUser)
+                .andRoute(GET("/api/v1/usuario/{document_number}"), handler::getUserByDocumentNumber);
     }
+
+
 }
